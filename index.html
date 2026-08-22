@@ -1,0 +1,1419 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>درس × لعبة - تغير حالات المادة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background-color: #f0fdfa; user-select: none; overflow-x: hidden; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); }
+        .btn-bounce { transition: transform 0.2s; }
+        .btn-bounce:active { transform: scale(0.95); }
+        
+        /* Matching Game Styles */
+        .match-item { transition: all 0.3s; }
+        .match-item.selected { background-color: #fef08a; border-color: #eab308; transform: scale(1.05); }
+        .match-item.matched { background-color: #86efac; border-color: #22c55e; opacity: 0.7; pointer-events: none; }
+        .match-item.error { background-color: #fca5a5; border-color: #ef4444; animation: shake 0.5s; }
+        .match-item.timeout-error { background-color: #fecaca; border-color: #ef4444; opacity: 0.6; pointer-events: none; }
+        
+        /* Bubbles Style */
+        .game-bubble {
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(186, 230, 253, 0.7) 60%, rgba(56, 189, 248, 0.4));
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.8), 0 4px 10px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.6);
+            backdrop-filter: blur(4px);
+            color: #0c4a6e;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+        }
+
+        /* Targets Style */
+        .horizontal-target {
+            background-color: white;
+            border: 4px solid;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Robust CSS Animations */
+        @keyframes fallDown { from { top: -150px; } to { top: 120%; } }
+        @keyframes moveRight { from { left: -150px; } to { left: 120%; } }
+        @keyframes moveLeft { from { left: 100%; } to { left: -150px; } }
+        
+        .anim-fall { animation: fallDown 25s linear forwards; }
+        .anim-right { animation: moveRight 20s linear forwards; }
+        .anim-left { animation: moveLeft 20s linear forwards; }
+
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+        .popup-anim { animation: popIn 0.3s ease-out forwards; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen pb-20 relative">
+
+    <!-- GLOBAL FIXED HEADER (Safe top bar for logo) -->
+    <header class="fixed top-0 w-full bg-white/95 backdrop-blur-md shadow-sm z-50 h-20 flex items-center px-4 md:px-8 border-b border-teal-100 transition-all">
+        <img src="logo.jpeg" alt="Logo" class="w-14 h-14 md:w-16 md:h-16 rounded-xl shadow-sm object-cover border border-teal-200 bg-white" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSIjOTRjM2Q4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjMiPkxvZ288L3RleHQ+PC9zdmc+'; this.onerror=null;">
+        <h1 class="mr-4 font-extrabold text-teal-800 text-lg md:text-2xl drop-shadow-sm">درس × لعبة</h1>
+    </header>
+
+    <!-- Main Container (Pushed down to avoid overlap with fixed header) -->
+    <div class="max-w-4xl mx-auto p-4 relative pt-28" id="main-container">
+        
+        <!-- Main Dashboard Screen -->
+        <div id="screen-home" class="space-y-6">
+            <!-- Header Section -->
+            <div class="glass-panel rounded-2xl p-6 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center gap-6 mt-4">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-teal-200 rounded-full opacity-50 blur-xl"></div>
+                <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-200 rounded-full opacity-50 blur-xl"></div>
+                
+                <div class="w-full md:w-1/2 text-center md:text-right z-10 flex flex-col justify-center">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-700 mb-2">الصف الثانى الإعدادى - الترم الأول</h2>
+                    <h3 class="text-xl md:text-2xl text-teal-600 font-extrabold mb-4">درس: تغير حالات المادة</h3>
+                    
+                    <div class="mt-4 border-t border-teal-100 pt-4">
+                        <p class="text-sm text-gray-500 font-bold">مع الأستاذ</p>
+                        <p class="text-2xl font-bold text-teal-800">حبيب بُشرى</p>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-1/2 z-10 flex justify-center md:justify-end">
+                    <img src="pic.jpeg" alt="صورة المعلم" class="w-48 h-48 sm:w-64 sm:h-64 md:w-full md:max-w-[300px] aspect-square rounded-2xl border-4 border-teal-400 shadow-xl object-cover bg-teal-50" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSIjOTRjM2Q4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjMiPkxvZ288L3RleHQ+PC9zdmc+'; this.onerror=null;">
+                </div>
+            </div>
+
+            <h3 class="text-center font-bold text-gray-600 mt-8 mb-4">اختر اللعبة لتبدأ التحدي</h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- 1. MCQ -->
+                <button onclick="startGame('mcq')" class="btn-bounce bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الاختيار من متعدد</h4>
+                        <p class="text-xs text-blue-100">15 سؤال لاختبار معلوماتك</p>
+                    </div>
+                    <i class="fa-solid fa-list-check text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 2. Bubbles -->
+                <button onclick="startGame('bubbles')" class="btn-bounce bg-gradient-to-r from-cyan-500 to-cyan-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الفقاعات المتساقطة</h4>
+                        <p class="text-xs text-cyan-100">المس الفقاعة الصحيحة قبل سقوطها</p>
+                    </div>
+                    <i class="fa-solid fa-droplet text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 3. Shoot (Targets) -->
+                <button onclick="startGame('shoot')" class="btn-bounce bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">التنشين المتحرك</h4>
+                        <p class="text-xs text-red-100">صِد الهدف الصحيح المتحرك</p>
+                    </div>
+                    <i class="fa-solid fa-bullseye text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 4. True/False -->
+                <button onclick="startGame('tf')" class="btn-bounce bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">صح أم خطأ</h4>
+                        <p class="text-xs text-orange-100">حدد صحة العبارات</p>
+                    </div>
+                    <i class="fa-solid fa-check-double text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 5. Matching -->
+                <button onclick="startGame('match')" class="btn-bounce bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">لعبة التوصيل</h4>
+                        <p class="text-xs text-green-100">اربط بين المفاهيم الصحيحة</p>
+                    </div>
+                    <i class="fa-solid fa-link text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 6. Fill in the Blanks -->
+                <button onclick="startGame('fill')" class="btn-bounce bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الكلمة المفقودة</h4>
+                        <p class="text-xs text-purple-100">أكمل الفراغ لتكتمل العبارة</p>
+                    </div>
+                    <i class="fa-solid fa-puzzle-piece text-3xl opacity-80"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Shared Internal Game Header (Compact) -->
+        <div id="game-header" class="hidden mb-6 bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+            <div class="flex justify-between items-center w-full">
+                <button onclick="goHome()" class="btn-bounce bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-right"></i> للرئيسية
+                </button>
+                
+                <div class="flex items-center gap-3">
+                    <div class="text-left hidden sm:block">
+                        <p class="text-xs text-gray-500 font-bold">أ. حبيب بُشرى</p>
+                        <p class="text-sm font-bold text-teal-700">تغير حالات المادة</p>
+                    </div>
+                    <img src="pic.jpeg" class="w-10 h-10 rounded-full border-2 border-teal-500 object-cover bg-gray-100" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjQ1IiByPSIyMCIgZmlsbD0iI2RjZmNlNyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMTA1IiByPSI0NSIgZmlsbD0iI2RjZmNlNyIvPjwvc3ZnPg==';">
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center w-full border-t border-gray-100 pt-2">
+                <div id="timer-container" class="flex flex-col w-1/3 transition-opacity duration-300">
+                    <div class="flex items-center gap-1 text-red-600 font-bold text-sm">
+                        <i class="fa-solid fa-stopwatch"></i> الوقت: <span id="timer-display">60</span>ث
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                        <div id="timer-bar" class="bg-red-500 h-1.5 rounded-full" style="width: 100%; transition: width 1s linear;"></div>
+                    </div>
+                </div>
+
+                <h2 id="current-game-title" class="text-base sm:text-lg font-bold text-teal-700 text-center w-1/3">عنوان اللعبة</h2>
+                
+                <div class="text-sm sm:text-base font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-lg border w-1/3 text-left">
+                    النتيجة: <span id="current-score" class="text-teal-600">0</span>/15
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screens Container -->
+        
+        <!-- 1. MCQ Game -->
+        <div id="screen-mcq" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="mcq-progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <h3 id="mcq-question" class="text-2xl font-bold text-gray-800 mb-6 text-center leading-relaxed"></h3>
+                <div id="mcq-options" class="grid grid-cols-1 gap-3"></div>
+            </div>
+        </div>
+
+        <!-- 2. Bubbles Game (Vertical Falling) -->
+        <div id="screen-bubbles" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="bubbles-progress" class="bg-cyan-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="bg-cyan-50 border border-cyan-200 rounded-xl p-4 mb-4 text-center">
+                    <h3 id="bubbles-question" class="text-xl font-bold text-gray-800"></h3>
+                </div>
+                <div id="bubbles-game-area" class="relative w-full h-[450px] overflow-hidden rounded-xl shadow-inner bg-gradient-to-b from-blue-50 to-cyan-100">
+                    <!-- Bubbles injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Shoot Game (Horizontal Targets) -->
+        <div id="screen-shoot" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="shoot-progress" class="bg-red-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-center">
+                    <h3 id="shoot-question" class="text-xl font-bold text-gray-800"></h3>
+                </div>
+                <div id="shoot-game-area" class="relative w-full h-[450px] overflow-hidden bg-gray-900 border-4 border-gray-700 rounded-xl shadow-inner">
+                    <!-- Targets injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. True/False Game -->
+        <div id="screen-tf" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl flex flex-col">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="tf-progress" class="bg-orange-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center font-bold text-gray-600 mb-6 text-lg">اقرأ العبارة وحدد: صح أم خطأ؟</p>
+                <div class="flex items-center justify-center mb-8">
+                    <div id="tf-statement" class="bg-white border-2 border-orange-300 text-gray-800 font-bold text-xl md:text-2xl py-8 px-6 rounded-2xl shadow-md w-full text-center min-h-[150px] flex items-center justify-center leading-relaxed"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 w-full">
+                    <button onclick="checkTF(true)" class="btn-bounce bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl flex flex-col items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-check text-5xl mb-2"></i><span class="font-bold text-xl md:text-2xl">صح</span>
+                    </button>
+                    <button onclick="checkTF(false)" class="btn-bounce bg-red-500 hover:bg-red-600 text-white p-6 rounded-xl flex flex-col items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-xmark text-5xl mb-2"></i><span class="font-bold text-xl md:text-2xl">خطأ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Match Game -->
+        <div id="screen-match" class="hidden game-screen">
+            <div class="glass-panel p-4 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="match-progress" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center text-gray-600 mb-4 font-bold">المس عنصراً من القائمة الأولى ثم ما يناسبه من الثانية</p>
+                <div class="flex gap-4 justify-between" id="match-container">
+                    <div class="w-1/2 space-y-2 flex flex-col" id="match-list-a"></div>
+                    <div class="w-1/2 space-y-2 flex flex-col" id="match-list-b"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Fill in the Blanks Game -->
+        <div id="screen-fill" class="hidden game-screen">
+            <div class="glass-panel p-4 md:p-6 rounded-2xl flex flex-col">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 md:mb-6">
+                    <div id="fill-progress" class="bg-purple-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center font-bold text-gray-600 mb-4 md:mb-6 text-sm md:text-lg">اختر الكلمة المناسبة لتكملة العبارة</p>
+                <div class="bg-white border-2 border-purple-200 py-6 px-4 md:py-8 md:px-6 rounded-2xl shadow-sm text-center mb-6 flex items-center justify-center min-h-[120px] md:min-h-[160px]">
+                    <h3 id="fill-sentence" class="text-lg sm:text-xl md:text-3xl font-bold text-gray-800 leading-loose"></h3>
+                </div>
+                <div id="fill-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div id="feedback-content" class="bg-white rounded-2xl p-6 max-w-sm w-full text-center transform scale-50 opacity-0 transition-all duration-300">
+            <div id="feedback-icon" class="text-6xl mb-4"></div>
+            <h3 id="feedback-title" class="text-2xl font-bold mb-2"></h3>
+            <p id="feedback-msg" class="text-gray-600 mb-6 font-bold text-lg leading-relaxed"></p>
+            <button onclick="closeFeedback()" class="bg-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-md w-full hover:bg-teal-600 transition-colors">متابعة</button>
+        </div>
+    </div>
+
+    <!-- End Game Modal -->
+    <div id="endgame-modal" class="fixed inset-0 bg-teal-900 bg-opacity-95 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+            <i class="fa-solid fa-trophy text-6xl text-yellow-400 mb-4"></i>
+            <h2 class="text-3xl font-bold text-teal-800 mb-2">اكتملت اللعبة!</h2>
+            <p class="text-xl text-gray-700 mb-6 font-bold">لقد حققت <span id="endgame-score" class="text-teal-600 text-2xl">15</span> من 15</p>
+            <button onclick="goHome()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg text-xl btn-bounce">
+                العودة للرئيسية
+            </button>
+        </div>
+    </div>
+
+    <!-- WhatsApp -->
+    <a href="https://wa.me/201008822782" target="_blank" class="fixed bottom-6 right-6 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 hover:scale-110 transition-all z-40 btn-bounce border-2 border-white z-50">
+        <i class="fa-brands fa-whatsapp text-3xl"></i>
+    </a>
+
+    <script>
+        // --- Utility Functions ---
+        function shuffleArray(originalArray) {
+            let array = originalArray.slice(); 
+            let currentIndex = array.length, randomIndex, tempValue;
+            while (currentIndex > 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                tempValue = array[currentIndex];
+                array[currentIndex] = array[randomIndex];
+                array[randomIndex] = tempValue;
+            }
+            return array;
+        }
+
+        // --- Audio Engine (Disabled as requested) ---
+        function initAudio() {}
+        document.addEventListener('pointerdown', initAudio, { once: true });
+        document.addEventListener('keydown', initAudio, { once: true });
+        function playSound(type) { return; }
+
+        // --- Data Datasets (10 Normal + 5 Hard) per Game (Based ONLY on the provided PDF) ---
+        
+        const mcqData = [
+            {
+                        "q": "تحول المادة الصلبة إلى سائل باكتساب طاقة حرارية يسمى:",
+                        "options": [
+                                    "الانصهار",
+                                    "التجمد",
+                                    "التبخر",
+                                    "التكاثف"
+                        ],
+                        "ans": "الانصهار"
+            },
+            {
+                        "q": "تحول المادة السائلة إلى غاز فى جميع أجزائها عند درجة حرارة معينة تسمى نقطة الغليان يُعرف باسم:",
+                        "options": [
+                                    "الغليان",
+                                    "الانصهار",
+                                    "التساقط",
+                                    "التسامى"
+                        ],
+                        "ans": "الغليان"
+            },
+            {
+                        "q": "الدرجة التى تنصهر عندها المادة الصلبة عند الضغط الجوى المعتاد تسمى:",
+                        "options": [
+                                    "درجة الانصهار",
+                                    "درجة الغليان",
+                                    "درجة التجمد فقط",
+                                    "درجة الحرارة العظمى"
+                        ],
+                        "ans": "درجة الانصهار"
+            },
+            {
+                        "q": "أثناء عمليتى الانصهار والغليان تظل درجة حرارة المادة:",
+                        "options": [
+                                    "ثابتة",
+                                    "مرتفعة باستمرار",
+                                    "منخفضة باستمرار",
+                                    "متذبذبة صعودًا وهبوطًا"
+                        ],
+                        "ans": "ثابتة"
+            },
+            {
+                        "q": "تحول بخار الماء إلى قطرات ماء سائلة نتيجة فقد طاقة حرارية يسمى:",
+                        "options": [
+                                    "التكاثف",
+                                    "التبخر",
+                                    "التسامى",
+                                    "التساقط"
+                        ],
+                        "ans": "التكاثف"
+            },
+            {
+                        "q": "تحول الماء السائل إلى جليد صلب نتيجة فقد طاقة حرارية يسمى:",
+                        "options": [
+                                    "التجمد",
+                                    "الانصهار",
+                                    "الغليان",
+                                    "التبخر"
+                        ],
+                        "ans": "التجمد"
+            },
+            {
+                        "q": "تحول المادة من الحالة الصلبة إلى الحالة الغازية مباشرة دون المرور بالحالة السائلة يسمى:",
+                        "options": [
+                                    "التسامى",
+                                    "التساقط",
+                                    "الانصهار",
+                                    "التكاثف"
+                        ],
+                        "ans": "التسامى"
+            },
+            {
+                        "q": "تحول المادة من الحالة الغازية إلى الحالة الصلبة مباشرة دون المرور بالحالة السائلة يسمى:",
+                        "options": [
+                                    "التساقط",
+                                    "التسامى",
+                                    "التبخر",
+                                    "التجمد"
+                        ],
+                        "ans": "التساقط"
+            },
+            {
+                        "q": "من العوامل المؤثرة على درجتى انصهار وغليان المواد:",
+                        "options": [
+                                    "الضغط الجوى ودرجة نقاء المادة",
+                                    "لون المادة فقط",
+                                    "شكل الإناء الحاوى فقط",
+                                    "وزن الإناء فقط"
+                        ],
+                        "ans": "الضغط الجوى ودرجة نقاء المادة"
+            },
+            {
+                        "q": "كلما زاد الضغط الجوى المؤثر على الماء عن الضغط المعتاد، فإن ذلك يؤدى إلى ارتفاع درجة غليانه عن:",
+                        "options": [
+                                    "100°م",
+                                    "0°م",
+                                    "50°م",
+                                    "150°م"
+                        ],
+                        "ans": "100°م"
+            },
+            {
+                        "q": "ينخفض الضغط الجوى فى المناطق الجبلية المرتفعة، وتنخفض درجة الحرارة بمقدار 1°م تقريبًا لكل ارتفاع:",
+                        "options": [
+                                    "300 م عن سطح البحر",
+                                    "100 م عن سطح البحر",
+                                    "1000 م عن سطح البحر",
+                                    "50 م عن سطح البحر"
+                        ],
+                        "ans": "300 م عن سطح البحر"
+            },
+            {
+                        "q": "القدر الكاتم (حلة الضغط) يعمل على احتباس بخار الماء بداخله، مما يؤدى إلى:",
+                        "options": [
+                                    "زيادة الضغط داخله وارتفاع درجة غليان الماء به",
+                                    "خفض الضغط داخله وخفض درجة غليان الماء",
+                                    "عدم تأثر درجة الغليان بداخله",
+                                    "تجمد الماء بسرعة بداخله"
+                        ],
+                        "ans": "زيادة الضغط داخله وارتفاع درجة غليان الماء به"
+            },
+            {
+                        "q": "عند إذابة 342 جرام من سكر الجلوكوز فى لتر واحد من الماء المقطر، ترتفع درجة غليان المحلول بمقدار:",
+                        "options": [
+                                    "0.5°م",
+                                    "1.86°م",
+                                    "5°م",
+                                    "10°م"
+                        ],
+                        "ans": "0.5°م"
+            },
+            {
+                        "q": "وينخفض معه فى نفس المحلول درجة تجمد (انصهار) المحلول بمقدار:",
+                        "options": [
+                                    "1.86°م",
+                                    "0.5°م",
+                                    "0.1°م",
+                                    "3°م"
+                        ],
+                        "ans": "1.86°م"
+            },
+            {
+                        "q": "يتوقف مقدار ارتفاع درجة غليان المحلول وانخفاض درجة تجمده على:",
+                        "options": [
+                                    "تركيز المحلول",
+                                    "لون المحلول",
+                                    "حجم الإناء الحاوى للمحلول",
+                                    "شكل الإناء الحاوى للمحلول"
+                        ],
+                        "ans": "تركيز المحلول"
+            }
+];
+
+        const bubblesData = [
+            {
+                        "q": "عند اكتساب المادة فى أحد حالاتها طاقة حرارية، تزداد طاقة حركة جسيماتها، لذا:",
+                        "options": [
+                                    "ترتفع درجة حرارة المادة",
+                                    "تنخفض درجة حرارة المادة",
+                                    "تظل درجة حرارتها ثابتة دائمًا",
+                                    "تفقد المادة كتلتها"
+                        ],
+                        "ans": "ترتفع درجة حرارة المادة"
+            },
+            {
+                        "q": "عند فقد المادة فى أحد حالاتها طاقة حرارية، تقل طاقة حركة جسيماتها، لذا:",
+                        "options": [
+                                    "تنخفض درجة حرارة المادة",
+                                    "ترتفع درجة حرارة المادة",
+                                    "يزداد حجمها فجأة",
+                                    "تتحول لحالة البلازما"
+                        ],
+                        "ans": "تنخفض درجة حرارة المادة"
+            },
+            {
+                        "q": "تحول المادة من حالة لأخرى لا يصاحبه تغير فى:",
+                        "options": [
+                                    "تركيب جزيئات المادة",
+                                    "درجة حرارة المادة أثناء التحول",
+                                    "كمية الطاقة الحرارية المتبادلة",
+                                    "حالة المادة الفيزيائية"
+                        ],
+                        "ans": "تركيب جزيئات المادة"
+            },
+            {
+                        "q": "التبخر يحدث عند سطح السائل فقط عند درجات حرارة:",
+                        "options": [
+                                    "أقل من درجة الغليان",
+                                    "مساوية لدرجة الغليان فقط",
+                                    "أعلى من درجة الغليان دائمًا",
+                                    "الصفر المطلق"
+                        ],
+                        "ans": "أقل من درجة الغليان"
+            },
+            {
+                        "q": "أثناء التبخر تكتسب جزيئات سطح السائل طاقة حرارية من الوسط المحيط تمكنها من:",
+                        "options": [
+                                    "التحرر من قوى جذب جزيئات الماء الأخرى والانطلاق إلى الهواء",
+                                    "الاندماج بقوة أكبر مع الجزيئات المجاورة",
+                                    "التجمد الفورى",
+                                    "فقد كتلتها بالكامل"
+                        ],
+                        "ans": "التحرر من قوى جذب جزيئات الماء الأخرى والانطلاق إلى الهواء"
+            },
+            {
+                        "q": "الانصهار والتجمد يُعدان من العمليات:",
+                        "options": [
+                                    "الانعكاسية",
+                                    "غير القابلة للتكرار",
+                                    "الكيميائية فقط",
+                                    "التى تُكوّن مواد جديدة"
+                        ],
+                        "ans": "الانعكاسية"
+            },
+            {
+                        "q": "التبخر والتكاثف أيضًا يُعدان عمليتين:",
+                        "options": [
+                                    "انعكاسيتين",
+                                    "منفصلتين تمامًا لا علاقة بينهما",
+                                    "كيميائيتين فقط",
+                                    "تحدثان فى الأجسام الصلبة فقط"
+                        ],
+                        "ans": "انعكاسيتين"
+            },
+            {
+                        "q": "التسامى والتساقط عمليتان:",
+                        "options": [
+                                    "انعكاسيتان",
+                                    "لا ترتبطان ببعضهما البعض",
+                                    "تحدثان فقط فى السوائل",
+                                    "تتطلبان تفاعلًا كيميائيًا"
+                        ],
+                        "ans": "انعكاسيتان"
+            },
+            {
+                        "q": "من العوامل المؤثرة على معدل تبخر السوائل: درجة الحرارة، مساحة السطح المعرض للهواء، سرعة التيارات الهوائية، و:",
+                        "options": [
+                                    "نسبة الرطوبة فى الهواء",
+                                    "لون الإناء",
+                                    "المادة المصنوع منها الإناء فقط",
+                                    "الوزن الكلى للإناء"
+                        ],
+                        "ans": "نسبة الرطوبة فى الهواء"
+            },
+            {
+                        "q": "معدل التبخر يزداد مع نقص:",
+                        "options": [
+                                    "نسبة الرطوبة (بخار الماء) فى الهواء",
+                                    "درجة حرارة السائل",
+                                    "مساحة سطح السائل المعرض للهواء",
+                                    "سرعة التيارات الهوائية"
+                        ],
+                        "ans": "نسبة الرطوبة (بخار الماء) فى الهواء"
+            },
+            {
+                        "q": "دورة الماء فى الطبيعة تشمل عمليات تحول أساسية للماء مثل:",
+                        "options": [
+                                    "التبخر والتكاثف والتجمد والانصهار",
+                                    "الأكسدة والاختزال فقط",
+                                    "التخمر والتحلل فقط",
+                                    "الاحتراق فقط"
+                        ],
+                        "ans": "التبخر والتكاثف والتجمد والانصهار"
+            },
+            {
+                        "q": "تؤثر دورة الماء فى الطبيعة بصورة مباشرة على الكثير من:",
+                        "options": [
+                                    "عوامل الطقس",
+                                    "أنواع المعادن فقط",
+                                    "الألوان المرئية فقط",
+                                    "الأصوات المسموعة"
+                        ],
+                        "ans": "عوامل الطقس"
+            },
+            {
+                        "q": "سميت القهوة الفورية بهذا الاسم لسرعة ذوبانها فى الماء مقارنة بالقهوة العادية، ويتم تصنيعها بتعريض رذاذ شراب القهوة المركزة لهواء جاف شديد الحرارة يبلغ حوالى:",
+                        "options": [
+                                    "250°م",
+                                    "50°م",
+                                    "1000°م",
+                                    "100°م فقط"
+                        ],
+                        "ans": "250°م"
+            },
+            {
+                        "q": "زيادة مساحة أسطح رذاذ القهوة المعرضة للهواء الساخن أثناء التصنيع تؤدى إلى:",
+                        "options": [
+                                    "زيادة معدل التبخر وتكوين بللورات القهوة الفورية الصلبة",
+                                    "تقليل معدل التبخر تمامًا",
+                                    "تحول القهوة إلى سائل دائمًا",
+                                    "تجمد القهوة فورًا"
+                        ],
+                        "ans": "زيادة معدل التبخر وتكوين بللورات القهوة الفورية الصلبة"
+            },
+            {
+                        "q": "الشوائب الموجودة فى المادة تؤثر على قوى التجاذب بين جسيمات المادة النقية، مما يغير:",
+                        "options": [
+                                    "درجتى الانصهار والغليان للمادة",
+                                    "لون المادة فقط",
+                                    "كتلة المادة فقط",
+                                    "حالة المادة إلى بلازما مباشرة"
+                        ],
+                        "ans": "درجتى الانصهار والغليان للمادة"
+            }
+];
+
+        const shootData = [
+            {
+                        "q": "العامل الذى يظل ثابتًا أثناء إجراء التجربة يسمى المتغير:",
+                        "options": [
+                                    "الضابط",
+                                    "المستقل",
+                                    "التابع",
+                                    "العشوائى"
+                        ],
+                        "ans": "الضابط"
+            },
+            {
+                        "q": "العامل الذى يتم تغييره أثناء إجراء التجربة يسمى المتغير:",
+                        "options": [
+                                    "المستقل (السبب)",
+                                    "الضابط",
+                                    "التابع (النتيجة)",
+                                    "الثابت"
+                        ],
+                        "ans": "المستقل (السبب)"
+            },
+            {
+                        "q": "العامل الذى يتغير بتغير المتغير المستقل أثناء التجربة يسمى المتغير:",
+                        "options": [
+                                    "التابع (النتيجة)",
+                                    "المستقل (السبب)",
+                                    "الضابط",
+                                    "المهمل"
+                        ],
+                        "ans": "التابع (النتيجة)"
+            },
+            {
+                        "q": "عند رسم منحنى تسخين الماء بيانيًا، تظل درجة الحرارة ثابتة عند 0°م أثناء مرحلة:",
+                        "options": [
+                                    "الانصهار",
+                                    "التبخر السطحى فقط",
+                                    "التسامى",
+                                    "التكاثف"
+                        ],
+                        "ans": "الانصهار"
+            },
+            {
+                        "q": "وتظل درجة الحرارة ثابتة أيضًا عند 100°م أثناء مرحلة:",
+                        "options": [
+                                    "الغليان",
+                                    "التجمد",
+                                    "التساقط",
+                                    "الانضغاط"
+                        ],
+                        "ans": "الغليان"
+            },
+            {
+                        "q": "بعد اكتمال الغليان واستمرار اكتساب الماء البخارى لطاقة حرارية إضافية، فإن درجة حرارته:",
+                        "options": [
+                                    "ترتفع تدريجيًا فوق 100°م",
+                                    "تظل ثابتة عند 100°م للأبد",
+                                    "تنخفض فجأة",
+                                    "تصل للصفر المطلق"
+                        ],
+                        "ans": "ترتفع تدريجيًا فوق 100°م"
+            },
+            {
+                        "q": "يبدأ منحنى تسخين الثلج من درجة حرارة أقل من الصفر المئوى، وترتفع تدريجيًا حتى تصل إلى نقطة:",
+                        "options": [
+                                    "الانصهار",
+                                    "الغليان مباشرة",
+                                    "التسامى",
+                                    "التكاثف"
+                        ],
+                        "ans": "الانصهار"
+            },
+            {
+                        "q": "لا تتفكك جزيئات الماء (H2O) إلى هيدروجين وأكسجين عند تحول الماء من حالة لأخرى، لأن هذا التحول:",
+                        "options": [
+                                    "تغير فيزيائى لا يصاحبه تغير فى تركيب الجزيئات",
+                                    "تغير كيميائى يكوّن مواد جديدة",
+                                    "تفاعل احتراق",
+                                    "تفاعل تعادل"
+                        ],
+                        "ans": "تغير فيزيائى لا يصاحبه تغير فى تركيب الجزيئات"
+            },
+            {
+                        "q": "فى التغيرات الكيميائية على عكس تغير حالة المادة، يحدث تغير فى تركيب المادة، و:",
+                        "options": [
+                                    "تتكون مواد جديدة",
+                                    "لا تتكون أى مواد جديدة",
+                                    "تظل نفس المادة كما هى دون أى تغيير",
+                                    "يقل عدد ذرات النواتج"
+                        ],
+                        "ans": "تتكون مواد جديدة"
+            },
+            {
+                        "q": "عند ارتفاع 1800 مترًا عن سطح البحر (ضغط 0.8 atm) تبلغ درجة غليان الماء النقى حوالى:",
+                        "options": [
+                                    "94°م",
+                                    "100°م",
+                                    "84°م",
+                                    "90°م"
+                        ],
+                        "ans": "94°م"
+            },
+            {
+                        "q": "عند ارتفاع 3000 متر عن سطح البحر (ضغط 0.69 atm) تبلغ درجة غليان الماء النقى حوالى:",
+                        "options": [
+                                    "90°م",
+                                    "94°م",
+                                    "100°م",
+                                    "84°م"
+                        ],
+                        "ans": "90°م"
+            },
+            {
+                        "q": "عند ارتفاع 4800 متر عن سطح البحر (ضغط 0.56 atm) تبلغ درجة غليان الماء النقى حوالى:",
+                        "options": [
+                                    "84°م",
+                                    "90°م",
+                                    "94°م",
+                                    "100°م"
+                        ],
+                        "ans": "84°م"
+            },
+            {
+                        "q": "قابلية ترك الملابس المبللة عرضة للهواء يجعلها تجف دون أن تصل لدرجة الغليان توضح عملية:",
+                        "options": [
+                                    "التبخر",
+                                    "الغليان",
+                                    "التسامى",
+                                    "التساقط"
+                        ],
+                        "ans": "التبخر"
+            },
+            {
+                        "q": "التبخر يحدث دون تكوّن فقاعات هوائية داخل السائل، بينما الغليان يحدث فى:",
+                        "options": [
+                                    "جميع أجزاء السائل مكوّنًا فقاعات",
+                                    "سطح السائل فقط",
+                                    "قاع الإناء فقط دون سطح السائل",
+                                    "الهواء المحيط فقط"
+                        ],
+                        "ans": "جميع أجزاء السائل مكوّنًا فقاعات"
+            },
+            {
+                        "q": "من العمليات الأساسية فى دورة الماء بالطبيعة والتى تعتمد على تغير حالة الماء:",
+                        "options": [
+                                    "التبخر والتكاثف والانصهار والتجمد",
+                                    "الأكسدة والاختزال",
+                                    "الترسيب الكيميائى فقط",
+                                    "التعادل الكيميائى فقط"
+                        ],
+                        "ans": "التبخر والتكاثف والانصهار والتجمد"
+            }
+];
+
+        const tfData = [
+            {
+                        "text": "تحول المادة الصلبة إلى سائل باكتساب طاقة حرارية يسمى الانصهار.",
+                        "isCorrect": true
+            },
+            {
+                        "text": "أثناء عمليتى الانصهار والغليان ترتفع درجة حرارة المادة باستمرار.",
+                        "isCorrect": false
+            },
+            {
+                        "text": "تحول بخار الماء إلى قطرات سائلة نتيجة فقد طاقة حرارية يسمى التكاثف.",
+                        "isCorrect": true
+            },
+            {
+                        "text": "التسامى هو تحول المادة من الحالة الصلبة إلى الغازية مباشرة دون المرور بالحالة السائلة.",
+                        "isCorrect": true
+            },
+            {
+                        "text": "التساقط هو تحول المادة من الحالة السائلة إلى الحالة الصلبة.",
+                        "isCorrect": false
+            },
+            {
+                        "text": "الانصهار والتجمد عمليتان انعكاسيتان لبعضهما.",
+                        "isCorrect": true
+            },
+            {
+                        "text": "كلما زاد الضغط الجوى المؤثر على الماء عن المعتاد، انخفضت درجة غليانه عن 100°م.",
+                        "isCorrect": false
+            },
+            {
+                        "text": "فى المناطق الجبلية المرتفعة ينخفض الضغط الجوى فتنخفض درجة غليان الماء عن 100°م.",
+                        "isCorrect": true
+            },
+            {
+                        "text": "القدر الكاتم يزيد الضغط داخله فيرتفع فيه غليان الماء عن الدرجة المعتادة، مما يقلل زمن الطهى.",
+                        "isCorrect": true
+            },
+            {
+                        "text": "الشوائب الموجودة فى المادة لا تؤثر إطلاقًا على درجتى انصهارها وغليانها.",
+                        "isCorrect": false
+            },
+            {
+                        "text": "معدل التبخر يزداد مع ارتفاع درجة الحرارة وزيادة مساحة سطح السائل المعرض للهواء.",
+                        "isCorrect": true
+            },
+            {
+                        "text": "زيادة نسبة الرطوبة فى الهواء تزيد من معدل تبخر السوائل.",
+                        "isCorrect": false
+            },
+            {
+                        "text": "التبخر يحدث عند سطح السائل فقط دون تكوّن فقاعات هوائية بعكس الغليان.",
+                        "isCorrect": true
+            },
+            {
+                        "text": "المتغير المستقل هو العامل الذى يظل ثابتًا طوال إجراء التجربة.",
+                        "isCorrect": false
+            },
+            {
+                        "text": "عند إذابة سكر الجلوكوز فى الماء ترتفع درجة غليان المحلول وتنخفض درجة تجمده مقارنة بالماء النقى.",
+                        "isCorrect": true
+            }
+];
+
+        const matchData = [
+            {
+                        "a": "الانصهار",
+                        "b": "تحول المادة الصلبة إلى سائل باكتساب طاقة حرارية"
+            },
+            {
+                        "a": "الغليان",
+                        "b": "تحول المادة السائلة إلى غاز فى جميع أجزائها عند نقطة معينة تسمى نقطة الغليان"
+            },
+            {
+                        "a": "التبخر",
+                        "b": "تحول جزيئات سطح السائل إلى غاز عند درجات حرارة أقل من درجة الغليان"
+            },
+            {
+                        "a": "التكاثف",
+                        "b": "تحول بخار الماء إلى قطرات ماء سائلة نتيجة فقد طاقة حرارية"
+            },
+            {
+                        "a": "التجمد",
+                        "b": "تحول الماء السائل إلى جليد صلب نتيجة فقد طاقة حرارية"
+            },
+            {
+                        "a": "التسامى",
+                        "b": "تحول المادة من الحالة الصلبة إلى الغازية مباشرة دون المرور بالسائلة"
+            },
+            {
+                        "a": "التساقط",
+                        "b": "تحول المادة من الحالة الغازية إلى الصلبة مباشرة دون المرور بالسائلة"
+            },
+            {
+                        "a": "درجة الانصهار",
+                        "b": "الدرجة التى تنصهر عندها المادة الصلبة عند الضغط الجوى المعتاد"
+            },
+            {
+                        "a": "درجة الغليان",
+                        "b": "الدرجة التى تغلى عندها المادة السائلة عند الضغط الجوى المعتاد"
+            },
+            {
+                        "a": "المتغير الضابط",
+                        "b": "العامل الذى يظل ثابتًا طوال إجراء التجربة"
+            },
+            {
+                        "a": "المتغير المستقل (السبب)",
+                        "b": "العامل الذى يتم تغييره أثناء إجراء التجربة"
+            },
+            {
+                        "a": "المتغير التابع (النتيجة)",
+                        "b": "العامل الذى يتغير بتغير المتغير المستقل"
+            },
+            {
+                        "a": "القدر الكاتم",
+                        "b": "أداة تحبس بخار الماء وترفع الضغط داخلها فيرتفع غليان الماء ويقل زمن الطهى"
+            },
+            {
+                        "a": "دورة الماء فى الطبيعة",
+                        "b": "تحولات الماء المستمرة بين حالاته المختلفة مثل التبخر والتكاثف والتجمد والانصهار"
+            },
+            {
+                        "a": "القهوة الفورية",
+                        "b": "قهوة تُصنع بتعريض رذاذ شراب القهوة المركزة لهواء جاف شديد الحرارة لزيادة سرعة ذوبانها"
+            }
+];
+
+        const fillData = [
+            {
+                        "text": "تحول المادة الصلبة إلى سائل باكتساب طاقة حرارية يسمى ... .",
+                        "blank": "الانصهار",
+                        "options": [
+                                    "الانصهار",
+                                    "التجمد",
+                                    "التبخر",
+                                    "التكاثف"
+                        ]
+            },
+            {
+                        "text": "تحول المادة السائلة إلى غاز عند نقطة معينة تسمى نقطة ... .",
+                        "blank": "الغليان",
+                        "options": [
+                                    "الغليان",
+                                    "الانصهار",
+                                    "التسامى",
+                                    "التساقط"
+                        ]
+            },
+            {
+                        "text": "أثناء عمليتى الانصهار والغليان تظل درجة حرارة المادة ... .",
+                        "blank": "ثابتة",
+                        "options": [
+                                    "ثابتة",
+                                    "مرتفعة باستمرار",
+                                    "منخفضة باستمرار",
+                                    "متذبذبة"
+                        ]
+            },
+            {
+                        "text": "تحول بخار الماء إلى قطرات ماء سائلة نتيجة فقد طاقة حرارية يسمى ... .",
+                        "blank": "التكاثف",
+                        "options": [
+                                    "التكاثف",
+                                    "التبخر",
+                                    "التسامى",
+                                    "التساقط"
+                        ]
+            },
+            {
+                        "text": "تحول المادة من الحالة الصلبة إلى الغازية مباشرة دون المرور بالسائلة يسمى ... .",
+                        "blank": "التسامى",
+                        "options": [
+                                    "التسامى",
+                                    "التساقط",
+                                    "الانصهار",
+                                    "التكاثف"
+                        ]
+            },
+            {
+                        "text": "كلما زاد الضغط الجوى المؤثر على الماء عن المعتاد، ارتفعت درجة غليانه عن ... °م.",
+                        "blank": "100",
+                        "options": [
+                                    "100",
+                                    "0",
+                                    "50",
+                                    "200"
+                        ]
+            },
+            {
+                        "text": "ينخفض الضغط الجوى فى المناطق الجبلية المرتفعة، وتنخفض درجة الحرارة بمقدار 1°م تقريبًا لكل ارتفاع ... متر.",
+                        "blank": "300",
+                        "options": [
+                                    "300",
+                                    "100",
+                                    "1000",
+                                    "50"
+                        ]
+            },
+            {
+                        "text": "يعمل القدر ... على احتباس بخار الماء بداخله فيرتفع الضغط ويقل زمن طهى الطعام.",
+                        "blank": "الكاتم",
+                        "options": [
+                                    "الكاتم",
+                                    "العادى",
+                                    "الزجاجى",
+                                    "المفتوح"
+                        ]
+            },
+            {
+                        "text": "معدل تبخر السوائل يزداد بارتفاع درجة الحرارة وزيادة مساحة السطح ونقص نسبة ... .",
+                        "blank": "الرطوبة",
+                        "options": [
+                                    "الرطوبة",
+                                    "الملوحة",
+                                    "الكثافة",
+                                    "اللزوجة"
+                        ]
+            },
+            {
+                        "text": "العامل الذى يتم تغييره أثناء إجراء التجربة يسمى المتغير ... .",
+                        "blank": "المستقل",
+                        "options": [
+                                    "المستقل",
+                                    "الضابط",
+                                    "التابع",
+                                    "الثابت"
+                        ]
+            },
+            {
+                        "text": "العامل الذى يتغير بتغير المتغير المستقل يسمى المتغير ... .",
+                        "blank": "التابع",
+                        "options": [
+                                    "التابع",
+                                    "المستقل",
+                                    "الضابط",
+                                    "العشوائى"
+                        ]
+            },
+            {
+                        "text": "عند إذابة 342 جرام من الجلوكوز فى لتر ماء، ترتفع درجة غليان المحلول بمقدار ... °م.",
+                        "blank": "0.5",
+                        "options": [
+                                    "0.5",
+                                    "1.86",
+                                    "5",
+                                    "10"
+                        ]
+            },
+            {
+                        "text": "وتنخفض درجة تجمد نفس المحلول بمقدار ... °م.",
+                        "blank": "1.86",
+                        "options": [
+                                    "1.86",
+                                    "0.5",
+                                    "3",
+                                    "0.1"
+                        ]
+            },
+            {
+                        "text": "سُميت القهوة الفورية بهذا الاسم لسرعة ... ها فى الماء مقارنة بالقهوة العادية.",
+                        "blank": "ذوبان",
+                        "options": [
+                                    "ذوبان",
+                                    "تبخر",
+                                    "تجمد",
+                                    "تكاثف"
+                        ]
+            },
+            {
+                        "text": "تحولات الماء المستمرة كالتبخر والتكاثف والتجمد والانصهار تُشكل ما يسمى ... الماء فى الطبيعة.",
+                        "blank": "دورة",
+                        "options": [
+                                    "دورة",
+                                    "طبقة",
+                                    "قشرة",
+                                    "سحابة"
+                        ]
+            }
+];
+
+        // --- Core Logic & Timer ---
+        let gameState = { currentScreen: 'home', activeGame: null, score: 0, questionIndex: 0, subLevel: 0, tempData: null, onFeedbackClose: null };
+        const titles = { mcq: "الاختيار من متعدد", match: "لعبة التوصيل", tf: "صح أم خطأ", fill: "الكلمة المفقودة", bubbles: "الفقاعات المتساقطة", shoot: "التنشين المتحرك" };
+        let gameTimer, timeLeft = 60, maxTime = 60;
+        let animTimeout;
+
+        function startTimer() {
+            clearInterval(gameTimer); 
+            // All games get 60 seconds
+            maxTime = 60;
+            timeLeft = maxTime; 
+            updateTimerUI();
+            
+            gameTimer = setInterval(() => {
+                timeLeft--; updateTimerUI();
+                if (timeLeft <= 0) { clearInterval(gameTimer); handleTimeout(); }
+            }, 1000);
+        }
+
+        function stopTimer() { clearInterval(gameTimer); }
+        
+        function resumeTimer() {
+            clearInterval(gameTimer);
+            gameTimer = setInterval(() => {
+                timeLeft--; updateTimerUI();
+                if (timeLeft <= 0) { clearInterval(gameTimer); handleTimeout(); }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            document.getElementById('timer-display').innerText = timeLeft;
+            document.getElementById('timer-bar').style.width = (timeLeft / maxTime * 100) + '%';
+        }
+
+        function pauseAnimations() {
+            document.querySelectorAll('.game-anim-element').forEach(t => t.style.animationPlayState = 'paused');
+        }
+
+        function handleTimeout() {
+            playSound('wrong');
+            pauseAnimations();
+
+            if (gameState.activeGame === 'match') { forceMatchSkip(); return; }
+
+            const qData = gameState.tempData[gameState.questionIndex];
+            let correctAns = qData.ans || (qData.isCorrect ? "صح" : "خطأ") || qData.blank;
+            
+            showFeedback(false, `انتهى الوقت! الإجابة الصحيحة هي: ${correctAns}`, () => {
+                gameState.questionIndex++;
+                if (gameState.activeGame === 'mcq') loadMCQQuestion();
+                else if (gameState.activeGame === 'tf') loadTFQuestion();
+                else if (gameState.activeGame === 'fill') loadFillQuestion();
+                else if (gameState.activeGame === 'bubbles') loadBubblesQuestion();
+                else if (gameState.activeGame === 'shoot') loadShootQuestion();
+            });
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('#main-container > div').forEach(el => {
+                if (el.id !== 'game-header' && el.id !== 'screen-home') el.classList.add('hidden');
+            });
+            if (screenId === 'home') {
+                document.getElementById('screen-home').classList.remove('hidden');
+                document.getElementById('game-header').classList.add('hidden');
+            } else {
+                document.getElementById('screen-home').classList.add('hidden');
+                document.getElementById('game-header').classList.remove('hidden');
+                document.getElementById('screen-' + screenId).classList.remove('hidden');
+                document.getElementById('current-game-title').innerText = titles[gameState.activeGame];
+                updateScoreDisplay();
+            }
+            gameState.currentScreen = screenId;
+        }
+
+        function goHome() {
+            playSound('click'); stopTimer(); pauseAnimations(); clearTimeout(animTimeout);
+            document.getElementById('feedback-modal').classList.add('hidden');
+            gameState.onFeedbackClose = null; showScreen('home');
+            document.getElementById('endgame-modal').classList.add('hidden'); gameState.activeGame = null;
+        }
+
+        function startGame(gameType) {
+            playSound('click'); initAudio(); 
+            gameState.activeGame = gameType; gameState.score = 0; gameState.questionIndex = 0; gameState.subLevel = 0;
+            
+            if (gameType === 'bubbles' || gameType === 'shoot') {
+                document.getElementById('timer-container').classList.add('opacity-0');
+            } else {
+                document.getElementById('timer-container').classList.remove('opacity-0');
+            }
+
+            if (gameType === 'mcq') initMCQ();
+            else if (gameType === 'match') initMatch();
+            else if (gameType === 'tf') initTF();
+            else if (gameType === 'fill') initFill();
+            else if (gameType === 'bubbles') initBubbles();
+            else if (gameType === 'shoot') initShoot();
+            showScreen(gameType);
+        }
+
+        function updateScoreDisplay() { document.getElementById('current-score').innerText = gameState.score; }
+        function endGame() {
+            stopTimer(); document.getElementById('endgame-score').innerText = gameState.score;
+            document.getElementById('endgame-modal').classList.remove('hidden'); playSound('correct');
+        }
+
+        function showFeedback(isCorrect, message, callback) {
+            const modal = document.getElementById('feedback-modal'); const content = document.getElementById('feedback-content');
+            const icon = document.getElementById('feedback-icon'); const title = document.getElementById('feedback-title');
+            const msg = document.getElementById('feedback-msg');
+            gameState.onFeedbackClose = callback;
+
+            if (isCorrect) {
+                playSound('correct'); icon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500 popup-anim"></i>';
+                title.innerText = "إجابة صحيحة!"; title.className = "text-2xl font-bold mb-2 text-green-600";
+            } else {
+                playSound('wrong'); icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500 popup-anim"></i>';
+                title.innerText = "إجابة خاطئة"; title.className = "text-2xl font-bold mb-2 text-red-600";
+            }
+            msg.innerText = message || ""; modal.classList.remove('hidden');
+            setTimeout(() => { content.classList.remove('scale-50', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+        }
+
+        function closeFeedback() {
+            playSound('click'); const modal = document.getElementById('feedback-modal');
+            const content = document.getElementById('feedback-content');
+            content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-50', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (gameState.onFeedbackClose) { gameState.onFeedbackClose(); gameState.onFeedbackClose = null; }
+            }, 300);
+        }
+
+        // --- 1. MCQ ---
+        function initMCQ() { gameState.tempData = shuffleArray(mcqData); loadMCQQuestion(); }
+        function loadMCQQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('mcq-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('mcq-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const optionsDiv = document.getElementById('mcq-options'); optionsDiv.innerHTML = '';
+            shuffleArray(qData.options).forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-bounce w-full bg-white border-2 border-blue-200 hover:bg-blue-50 text-blue-900 font-bold py-4 px-6 rounded-xl text-right shadow-sm text-lg transition-colors";
+                btn.innerText = opt; btn.onclick = () => { stopTimer(); checkMCQ(opt, qData.ans); };
+                optionsDiv.appendChild(btn);
+            });
+            startTimer();
+        }
+        function checkMCQ(selected, correct) {
+            const isCorrect = selected === correct;
+            if (isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "أحسنت!" : `الإجابة الصحيحة هي: ${correct}`, () => { gameState.questionIndex++; loadMCQQuestion(); });
+        }
+
+        // --- 2. Bubbles Game (CSS Animation) ---
+        function initBubbles() { gameState.tempData = shuffleArray(bubblesData); loadBubblesQuestion(); }
+        function loadBubblesQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('bubbles-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('bubbles-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            
+            const container = document.getElementById('bubbles-game-area'); container.innerHTML = '';
+            const opts = shuffleArray(qData.options);
+            const xPositions = [2, 27, 52, 77]; 
+
+            opts.forEach((opt, idx) => {
+                const bubble = document.createElement('div');
+                bubble.className = `game-anim-element anim-fall game-bubble absolute flex items-center justify-center p-2 w-20 h-20 sm:w-28 sm:h-28 text-xs sm:text-sm font-bold text-center cursor-pointer btn-bounce z-10`;
+                bubble.style.left = `${xPositions[idx]}%`;
+                bubble.innerText = opt;
+                bubble.onclick = () => processAnimGame(opt, qData.ans, 'bubbles');
+                container.appendChild(bubble);
+            });
+            
+            clearTimeout(animTimeout);
+            animTimeout = setTimeout(() => {
+                if (gameState.currentScreen === 'bubbles') processAnimTimeout('bubbles', qData.ans);
+            }, 25000);
+        }
+
+        // --- 3. Shoot Game (CSS Animation) ---
+        function initShoot() { gameState.tempData = shuffleArray(shootData); loadShootQuestion(); }
+        function loadShootQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('shoot-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('shoot-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            
+            const container = document.getElementById('shoot-game-area'); container.innerHTML = '';
+            const opts = shuffleArray(qData.options);
+            const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b']; 
+            const yPositions = [10, 35, 60, 85]; 
+            const directions = [1, -1, 1, -1]; 
+
+            opts.forEach((opt, idx) => {
+                const target = document.createElement('div');
+                let animClass = directions[idx] === 1 ? 'anim-right' : 'anim-left';
+                target.className = `game-anim-element ${animClass} horizontal-target absolute text-gray-800 p-1 rounded-full text-center font-bold flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 text-[10px] sm:text-sm cursor-pointer z-10 btn-bounce`;
+                target.style.borderColor = colors[idx]; 
+                target.style.top = `calc(${yPositions[idx]}% - 20px)`;
+                
+                target.innerHTML = `<i class="fa-solid fa-bullseye text-2xl sm:text-3xl mb-1" style="color: ${colors[idx]}"></i><span>${opt}</span>`;
+                target.onclick = () => processAnimGame(opt, qData.ans, 'shoot');
+                container.appendChild(target);
+            });
+            
+            clearTimeout(animTimeout);
+            animTimeout = setTimeout(() => {
+                if (gameState.currentScreen === 'shoot') processAnimTimeout('shoot', qData.ans);
+            }, 20000);
+        }
+
+        // Shared processing for Animated Games (Bubbles & Shoot)
+        function processAnimGame(selected, correct, gameType) {
+            clearTimeout(animTimeout);
+            pauseAnimations();
+            const isCorrect = selected === correct;
+            if(isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "إصابة دقيقة وممتازة!" : `للأسف أخطأت الهدف! الإجابة هي: ${correct}`, () => {
+                gameState.questionIndex++;
+                if(gameType === 'bubbles') loadBubblesQuestion(); else loadShootQuestion();
+            });
+        }
+
+        function processAnimTimeout(gameType, correct) {
+            playSound('wrong');
+            pauseAnimations();
+            showFeedback(false, `اختفت الأهداف! الإجابة الصحيحة هي: ${correct}`, () => {
+                gameState.questionIndex++;
+                if(gameType === 'bubbles') loadBubblesQuestion(); else loadShootQuestion();
+            });
+        }
+
+        // --- 4. True/False ---
+        function initTF() { gameState.tempData = shuffleArray(tfData); loadTFQuestion(); }
+        function loadTFQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const currentItem = gameState.tempData[gameState.questionIndex];
+            document.getElementById('tf-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const tfStatement = document.getElementById('tf-statement'); tfStatement.innerText = currentItem.text;
+            tfStatement.classList.remove('popup-anim'); void tfStatement.offsetWidth; tfStatement.classList.add('popup-anim');
+            startTimer();
+        }
+        function checkTF(userAnswer) {
+            stopTimer(); const currentItem = gameState.tempData[gameState.questionIndex];
+            const isCorrect = currentItem.isCorrect === userAnswer;
+            if(isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "إجابة صحيحة وممتازة!" : `إجابة خاطئة. العبارة ${currentItem.isCorrect?"صحيحة":"خاطئة"}.`, () => {
+                gameState.questionIndex++; loadTFQuestion();
+            });
+        }
+
+        // --- 5. Matching ---
+        function initMatch() { gameState.tempData = shuffleArray(matchData); gameState.subLevel = 0; gameState.questionIndex = 0; loadMatchRound(); }
+        function loadMatchRound() {
+            if (gameState.subLevel >= 3) return endGame();
+            const startIndex = gameState.subLevel * 5; const roundItems = gameState.tempData.slice(startIndex, startIndex + 5);
+            document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const listA = shuffleArray(roundItems.map(item => ({id: item.a, text: item.a, type: 'A'})));
+            const listB = shuffleArray(roundItems.map(item => ({id: item.a, text: item.b, type: 'B'}))); 
+            renderMatchList('match-list-a', listA); renderMatchList('match-list-b', listB);
+            matchSelectedA = null; matchSelectedB = null; startTimer();
+        }
+        function renderMatchList(containerId, items) {
+            const container = document.getElementById(containerId); container.innerHTML = '';
+            items.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "match-item bg-white border-2 border-gray-200 text-gray-700 font-bold py-3 px-2 rounded-lg shadow-sm text-xs sm:text-sm text-center min-h-[60px] flex items-center justify-center";
+                btn.innerText = item.text; btn.dataset.id = item.id; btn.dataset.type = item.type;
+                btn.onclick = () => handleMatchClick(btn); container.appendChild(btn);
+            });
+        }
+        function handleMatchClick(btn) {
+            if(btn.classList.contains('matched') || btn.classList.contains('timeout-error')) return;
+            playSound('click'); const type = btn.dataset.type;
+            document.querySelectorAll(`#match-list-${type.toLowerCase()} .match-item`).forEach(el => {
+                if(!el.classList.contains('matched') && !el.classList.contains('timeout-error')) el.classList.remove('selected');
+            });
+            btn.classList.add('selected');
+            if (type === 'A') matchSelectedA = btn; else matchSelectedB = btn;
+            if (matchSelectedA && matchSelectedB) {
+                stopTimer(); const idA = matchSelectedA.dataset.id; const idB = matchSelectedB.dataset.id;
+                if (idA === idB) {
+                    matchSelectedA.classList.remove('selected'); matchSelectedA.classList.add('matched');
+                    matchSelectedB.classList.remove('selected'); matchSelectedB.classList.add('matched');
+                    gameState.score++; gameState.questionIndex++; updateScoreDisplay();
+                    document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+                    checkMatchRoundProgress(true);
+                } else {
+                    playSound('wrong'); matchSelectedA.classList.add('error'); matchSelectedB.classList.add('error');
+                    let a = matchSelectedA, b = matchSelectedB;
+                    setTimeout(() => { a.classList.remove('selected', 'error'); b.classList.remove('selected', 'error'); resumeTimer(); }, 500);
+                }
+                matchSelectedA = null; matchSelectedB = null;
+            }
+        }
+        function forceMatchSkip() {
+            matchSelectedA = null; matchSelectedB = null;
+            document.querySelectorAll('.match-item').forEach(el => el.classList.remove('selected'));
+            let unmatchedA = Array.from(document.querySelectorAll('#match-list-a .match-item')).find(el => !el.classList.contains('matched') && !el.classList.contains('timeout-error'));
+            if(unmatchedA) {
+                let id = unmatchedA.dataset.id; let unmatchedB = document.querySelector(`#match-list-b .match-item[data-id="${id}"]`);
+                showFeedback(false, "انتهى الوقت! فقدت هذه النقطة.", () => {
+                    unmatchedA.classList.add('timeout-error'); 
+                    if(unmatchedB) unmatchedB.classList.add('timeout-error');
+                    gameState.questionIndex++; document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+                    checkMatchRoundProgress(false);
+                });
+            }
+        }
+        function checkMatchRoundProgress(wasCorrect) {
+            const totalDone = document.querySelectorAll('#match-list-a .matched').length + document.querySelectorAll('#match-list-a .timeout-error').length;
+            if (totalDone === 5) {
+                if(wasCorrect) playSound('correct');
+                setTimeout(() => { gameState.subLevel++; loadMatchRound(); }, 1000);
+            } else {
+                if(wasCorrect) {
+                    playSound('correct'); 
+                }
+                startTimer();
+            }
+        }
+
+        // --- 6. Fill in the Blanks ---
+        function initFill() { gameState.tempData = shuffleArray(fillData); loadFillQuestion(); }
+        function loadFillQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const currentItem = gameState.tempData[gameState.questionIndex];
+            document.getElementById('fill-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const sentenceHtml = currentItem.text.replace('...', '<span class="inline-block border-b-4 border-dashed border-purple-400 min-w-[70px] md:min-w-[100px] text-center text-purple-600 px-1 md:px-2 pb-1 mx-1 md:mx-2 relative top-1">؟</span>');
+            const sentenceEl = document.getElementById('fill-sentence'); sentenceEl.innerHTML = sentenceHtml;
+            sentenceEl.classList.remove('popup-anim'); void sentenceEl.offsetWidth; sentenceEl.classList.add('popup-anim');
+            const optionsContainer = document.getElementById('fill-options'); optionsContainer.innerHTML = '';
+            shuffleArray(currentItem.options).forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-bounce bg-white hover:bg-purple-50 border-2 border-purple-200 text-purple-800 font-bold py-3 md:py-4 px-3 md:px-6 rounded-xl shadow-sm text-sm sm:text-base md:text-lg transition-colors";
+                btn.innerText = opt; btn.onclick = () => { stopTimer(); checkFill(opt, currentItem.blank); };
+                optionsContainer.appendChild(btn);
+            });
+            startTimer();
+        }
+        function checkFill(selected, correct) {
+            const isCorrect = selected === correct;
+            if (isCorrect) gameState.score++; updateScoreDisplay();
+            const sentenceEl = document.getElementById('fill-sentence');
+            if (isCorrect) sentenceEl.innerHTML = sentenceEl.innerHTML.replace('؟', selected).replace('border-dashed', 'border-solid border-green-500 text-green-600');
+            else sentenceEl.innerHTML = sentenceEl.innerHTML.replace('؟', selected).replace('border-dashed', 'border-solid border-red-500 text-red-600 line-through');
+            showFeedback(isCorrect, isCorrect ? "ممتاز! الكلمة في مكانها الصحيح." : `خطأ! الكلمة الصحيحة هي: ${correct}`, () => {
+                gameState.questionIndex++; loadFillQuestion();
+            });
+        }
+
+    </script>
+</body>
+</html>
